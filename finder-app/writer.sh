@@ -9,12 +9,13 @@ then
 else
     PATHTOFILE=$1
     WRITESTR=$2
-
-    echo $WRITESTR > $PATHTOFILE
+    
+    mkdir -p "$(dirname $PATHTOFILE)"
+	echo $WRITESTR > $PATHTOFILE
 
     if [ -e $PATHTOFILE ]
     then
-        exit 0
+	    exit 0
     else
         echo "File can not be created"
         exit 1
