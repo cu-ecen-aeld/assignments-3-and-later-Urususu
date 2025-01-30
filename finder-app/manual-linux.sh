@@ -6,6 +6,7 @@ set -e
 set -u
 
 OUTDIR=/tmp/aeld
+BUILD=/tmp/build_uru
 KERNEL_REPO=git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
 KERNEL_VERSION=v5.15.163
 BUSYBOX_VERSION=1_33_1
@@ -34,18 +35,16 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
 
-    # TODO: Add your kernel build steps here
+    # Task: Add your kernel build steps here
 	# START DC_MODS
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} mrproper #clean removing .config file
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig #Setup default config
     make -j4 ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} all #Build kernel image
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} dtbs #Build devicetree
-    # DONE LATER? make make -C "$FINDER_APP_DIR" CROSS_COMPILE=aarch64-none-linux-gnu-
-    #qemu-system-arm -m 256M -nographic -M versatilepb -kernel zImage -append "console=ttyAMA0 rdinit=bin/sh" -dtb versatile-pb.dtb -initrd initramfs.cpio.gz
-	# END DC_MODS
 fi
 
 echo "Adding the Image in outdir"
+cp -v "${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image" "${OUTDIR}"
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
@@ -55,7 +54,7 @@ then
     sudo rm  -rf ${OUTDIR}/rootfs
 fi
 
-# TODO: Create necessary base directories
+# Task: Create necessary base directories
 # DC_ROOM:
 mkdir -p rootfs
 cd rootfs
@@ -63,6 +62,7 @@ mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr var
 mkdir -p usr/bin usr/lib usr/sbin
 mkdir -p var/log
 cd ..
+
 #END DC_ROOM
 
 cd "$OUTDIR"
@@ -71,7 +71,7 @@ then
 git clone git://busybox.net/busybox.git
     cd busybox
     git checkout ${BUSYBOX_VERSION}
-    # TODO:  Configure busybox
+    # Task:  Configure busybox
     #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} menuconfig
 	make defconfig
 else
@@ -79,7 +79,7 @@ else
 fi
 
 # DC_ROOM:
-# TODO: Make and install busybox
+# Task: Make and install busybox
 make distclean
 make defconfig
 make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
@@ -102,7 +102,6 @@ if [ -z "$SYSROOT" ]; then
     exit 1
 fi
 
-echo "Using sysroot: $SYSROOT" #TODO: DELETE THIS
 
 # Copy the interpreter to rootfs
 if [ ! -z "$INTERPRETER" ]; then
@@ -113,11 +112,12 @@ if [ ! -z "$INTERPRETER" ]; then
     cp -v "$INTERPRETER_PATH" "rootfs${INTERPRETER}"
 fi
 
+
 # Copy the shared libraries to rootfs
 for LIB in $SHAREDLIB; do
     LIB_PATH=$(find "$SYSROOT" -name "$LIB")
     if [ ! -z "$LIB_PATH" ]; then
-        DEST_DIR="rootfs$(dirname "$LIB_PATH")"
+        DEST_DIR="rootfs/lib64"
         mkdir -p "$DEST_DIR"
         cp -v "$LIB_PATH" "$DEST_DIR"
     else
@@ -125,7 +125,7 @@ for LIB in $SHAREDLIB; do
     fi
 done
 
-# TODO: Make device nodes
+# Task: Make device nodes
 
 mkdir -p rootfs/dev
 
@@ -133,7 +133,7 @@ sudo mknod -m 666 rootfs/dev/null c 1 3
 sudo mknod -m 600 rootfs/dev/console c 5 1
 
 
-# TODO: Clean and build the writer utility
+# Task: Clean and build the writer utility
 make -C "$FINDER_APP_DIR" clean #-C tells make to change to the directory specified by $FINDER_APP_DIR
 make -C "$FINDER_APP_DIR" CROSS_COMPILE=aarch64-none-linux-gnu-
 
@@ -141,24 +141,31 @@ make -C "$FINDER_APP_DIR" CROSS_COMPILE=aarch64-none-linux-gnu-
 # on the target rootfs
 cp ${FINDER_APP_DIR}/writer ${OUTDIR}/rootfs/home
 cp ${FINDER_APP_DIR}/finder.sh ${OUTDIR}/rootfs/home
-cp ${FINDER_APP_DIR}/conf/username.txt ${OUTDIR}/rootfs/home
-cp ${FINDER_APP_DIR}/conf/assignment.txt ${OUTDIR}/rootfs/home
+cp -r ${FINDER_APP_DIR}/conf/ ${OUTDIR}/rootfs/home/
+cp -r ${FINDER_APP_DIR}/conf/ ${OUTDIR}/rootfs/home/
 cp ${FINDER_APP_DIR}/finder-test.sh ${OUTDIR}/rootfs/home
 #cp ${FINDER_APP_DIR}/start-qemu-app.sh ${OUTDIR}/rootfs/home
 #cp ${FINDER_APP_DIR}/autorun-terminal.sh ${OUTDIR}/rootfs/home
 cp ${FINDER_APP_DIR}/autorun-qemu.sh ${OUTDIR}/rootfs/home
 
-# TODO: Chown the root directory
+# Task: Chown the root directory
 sudo chown -R root rootfs
 
-# TODO: Create initramfs.cpio.gz
-find . | cpio -H newc -ov --owner root:root > ${OUTDIR}/initramfs.cpio
-gzip -f initramfs.cpio
+# Task: Create initramfs.cpio.gz
 
-echo "############################ DC ROOM 4 #####################"
+if [ ! -e ${OUTDIR}/initramfs.cpio.gz ]; then
+    rm initramfs.cpio.gz
+fi
 
-#qemu-system-arm -m 256M -nographic -M versatilepb -kernel zImage -append "console=ttyAMA0 rdinit=bin/sh" -dtb versatile-pb.dtb -initrd initramfs.cpio.gz
-"$FINDER_APP_DIR/start-qemu-terminal.sh" "${OUTDIR}"
-"$FINDER_APP_DIR/start-qemu-app.sh" "${OUTDIR}"
+cd rootfs
+
+find . | cpio -H newc -ov --owner root:root > /tmp/initramfs.cpio
+gzip -f /tmp/initramfs.cpio
+
+mv /tmp/initramfs.cpio.gz ${OUTDIR}/initramfs.cpio.gz
+
+#qemu-system-arm -m 1024M -nographic -M versatilepb -kernel zImage -append "console=ttyAMA0 rdinit=bin/sh" -dtb versatile-pb.dtb -initrd initramfs.cpio.gz
+#"$FINDER_APP_DIR/start-qemu-terminal.sh" "${OUTDIR}"
+#"$FINDER_APP_DIR/start-qemu-app.sh" "${OUTDIR}"
 
 #END DC_ROOM
