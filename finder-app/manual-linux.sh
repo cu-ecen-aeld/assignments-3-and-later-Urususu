@@ -154,7 +154,7 @@ sudo chown -R root rootfs
 # Task: Create initramfs.cpio.gz
 
 if [ -e ${OUTDIR}/initramfs.cpio.gz ]; then
-    rm initramfs.cpio.gz
+    rm ${OUTDIR}/initramfs.cpio.gz
 fi
 
 cd rootfs
