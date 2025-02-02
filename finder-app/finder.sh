@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Script for assignment 1 and assignment 2
 # Author: Urususu Shocku
 
@@ -18,7 +18,7 @@ else
         matching_lines_count=0
  
         for file in $file_list; do
-            ((file_count++))
+            file_count=$((file_count+1))
             matching_lines=$(grep -c "$SEARCHSTR" "$file")
             matching_lines_count=$((matching_lines_count + matching_lines))
 		done
