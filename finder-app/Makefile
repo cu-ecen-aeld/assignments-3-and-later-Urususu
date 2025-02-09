@@ -1,3 +1,5 @@
+all: writer
+
 default: writer.o
 	$(CROSS_COMPILE)gcc -g -Wall -I/ writer.o -o writer
 
