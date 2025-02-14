@@ -6,11 +6,10 @@ set -e
 set -u
 
 NUMFILES=10
+CURRDIR=$(dirname $0)
 WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
 username=$(cat /etc/finder-app/conf/username.txt)
-
-echo "THIS IS BEING USED DELETE THIS PHRASE PLEASE" #TODO
 
 if [ $# -lt 3 ]
 then
@@ -61,7 +60,7 @@ do
 	writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
-OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
+OUTPUTSTRING=$(.${CURRDIR}/finder.sh "$WRITEDIR" "$WRITESTR")
 
 # remove temporary directories
 rm -rf /tmp/aeld-data
