@@ -1,4 +1,5 @@
-CC=aarch64-none-linux-gnu-gcc
+#CC=aarch64-none-linux-gnu-gcc
+CC=gcc
 CFLAGS=-Wall -g
 
 all: aesdsocket
